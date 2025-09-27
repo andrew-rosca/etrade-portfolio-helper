@@ -1,0 +1,29 @@
+/* E*TRADE Portfolio Helper Styles */
+
+/* Optional: Add visual indicators for positions with notes */
+.etrade-helper-has-notes {
+  border-left: 3px solid #28a745 !important;
+}
+
+.etrade-helper-no-notes {
+  border-left: 3px solid #dc3545 !important;
+}
+
+/* Optional: Add a small indicator overlay */
+.etrade-helper-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  z-index: 1000;
+}
+
+.etrade-helper-indicator.has-notes {
+  background-color: #28a745;
+}
+
+.etrade-helper-indicator.no-notes {
+  background-color: #dc3545;
+}
