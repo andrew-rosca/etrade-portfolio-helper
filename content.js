@@ -6,8 +6,8 @@ class EtradePortfolioHelper {
     this.positions = new Map();
     this.growthSymbols = new Set();
     this.incomeSymbols = new Set();
-    this.init();
     this.loadConfiguration();
+    this.init();
   }
 
   init() {
@@ -61,6 +61,9 @@ class EtradePortfolioHelper {
       this.growthSymbols = new Set(['AAPL', 'TSLA', 'NVDA']);
       this.incomeSymbols = new Set(['T', 'VZ', 'KO']);
     }
+    
+    // Update config panel if it exists (in case it was created before loading)
+    this.updateConfigPanelIfExists();
   }
 
   saveConfiguration() {
@@ -284,6 +287,8 @@ Example: T, VZ, KO, JNJ"></textarea>
       const panel = document.getElementById('etrade-helper-panel');
       panel.style.display = 'block';
       button.style.display = 'none';
+      // Update panel with current symbols when shown
+      this.updateConfigPanel();
     };
     
     document.body.appendChild(button);
@@ -309,6 +314,13 @@ Example: T, VZ, KO, JNJ"></textarea>
     
     if (incomeCountSpan) {
       incomeCountSpan.textContent = this.incomeSymbols.size;
+    }
+  }
+
+  updateConfigPanelIfExists() {
+    // Only update if the panel elements exist in the DOM
+    if (document.getElementById('etrade-helper-growth')) {
+      this.updateConfigPanel();
     }
   }
 
