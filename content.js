@@ -1,17 +1,19 @@
 // E*TRADE Portfolio Helper - Content Script
-// Simple symbol highlighting mode
+// Growth & Income Groups with Visual Sorting
 
 class EtradePortfolioHelper {
   constructor() {
     this.positions = new Map();
     this.growthSymbols = new Set();
     this.incomeSymbols = new Set();
+    this.sortingEnabled = false; // Track if visual sorting is enabled
+    this.originalRowPositions = new Map(); // Store original positions for reverting
     this.loadConfiguration();
     this.init();
   }
 
   init() {
-    console.log('E*TRADE Portfolio Helper loaded - Growth & Income Groups');
+    console.log('E*TRADE Portfolio Helper loaded - Growth & Income Groups with Visual Sorting');
     
     // Wait for the page to be fully loaded
     if (document.readyState === 'loading') {
@@ -32,25 +34,30 @@ class EtradePortfolioHelper {
     try {
       const savedGrowth = localStorage.getItem('etradeHelper_growthSymbols');
       const savedIncome = localStorage.getItem('etradeHelper_incomeSymbols');
+      const savedSorting = localStorage.getItem('etradeHelper_sortingEnabled');
       
       if (savedGrowth) {
         const growthArray = JSON.parse(savedGrowth);
         this.growthSymbols = new Set(growthArray.map(s => s.toUpperCase()));
       } else {
-        // Default growth symbols for demonstration
-        this.growthSymbols = new Set(['AAPL', 'TSLA', 'NVDA']);
+        // Default growth symbols for demonstration - using symbols from your portfolio
+        this.growthSymbols = new Set(['SPYG', 'AMZN', 'BRKW']);
       }
       
       if (savedIncome) {
         const incomeArray = JSON.parse(savedIncome);
         this.incomeSymbols = new Set(incomeArray.map(s => s.toUpperCase()));
       } else {
-        // Default income symbols for demonstration
-        this.incomeSymbols = new Set(['T', 'VZ', 'KO']);
+        // Default income symbols for demonstration - using symbols from your portfolio
+        this.incomeSymbols = new Set(['SPYI', 'MCD', 'CBF']);
       }
       
-      console.log('Loaded Growth symbols:', Array.from(this.growthSymbols));
-      console.log('Loaded Income symbols:', Array.from(this.incomeSymbols));
+      // Load sorting preference
+      if (savedSorting !== null) {
+        this.sortingEnabled = JSON.parse(savedSorting);
+      }
+      
+      console.log('Configuration loaded');
       
       // Save defaults if first time
       if (!savedGrowth || !savedIncome) {
@@ -73,9 +80,9 @@ class EtradePortfolioHelper {
       
       localStorage.setItem('etradeHelper_growthSymbols', JSON.stringify(growthArray));
       localStorage.setItem('etradeHelper_incomeSymbols', JSON.stringify(incomeArray));
+      localStorage.setItem('etradeHelper_sortingEnabled', JSON.stringify(this.sortingEnabled));
       
-      console.log('Saved Growth symbols:', growthArray);
-      console.log('Saved Income symbols:', incomeArray);
+      console.log('Configuration saved');
     } catch (error) {
       console.error('Error saving configuration:', error);
     }
@@ -100,7 +107,6 @@ class EtradePortfolioHelper {
       });
       
       if (shouldScan) {
-        console.log('Portfolio table updated, rescanning...');
         setTimeout(() => this.scanAndHighlight(), 1000);
       }
     });
@@ -112,11 +118,8 @@ class EtradePortfolioHelper {
   }
 
   scanAndHighlight() {
-    console.log('Scanning for positions to highlight...');
-    
     // Find all position rows
     const positionRows = document.querySelectorAll('.RowRenderer---root---C9M4t[role="row"]');
-    console.log(`Found ${positionRows.length} position rows`);
 
     let growthCount = 0;
     let incomeCount = 0;
@@ -158,20 +161,174 @@ class EtradePortfolioHelper {
       }
     });
     
-    console.log(`✨ Highlighted ${growthCount} Growth + ${incomeCount} Income positions out of ${positionRows.length} total`);
-    console.log(`� Growth symbols: ${Array.from(this.growthSymbols).join(', ')}`);
-    console.log(`💰 Income symbols: ${Array.from(this.incomeSymbols).join(', ')}`);
+    console.log(`Highlighted ${growthCount} Growth + ${incomeCount} Income positions`);
+    
+    // Apply visual sorting if enabled
+    if (this.sortingEnabled) {
+      this.sortRowsByGroup();
+    }
+  }
+
+  sortRowsByGroup() {
+    // Find all position rows
+    const positionRows = document.querySelectorAll('.RowRenderer---root---C9M4t[role="row"]');
+    
+    if (positionRows.length === 0) {
+      return;
+    }
+    
+    // Store original positions if not already stored
+    if (this.originalRowPositions.size === 0) {
+      positionRows.forEach((row, index) => {
+        const currentTop = row.style.top || '0px';
+        const currentTransform = row.style.transform || 'translateY(0px)';
+        const symbolCell = row.querySelector('.SymbolCellRenderer---symbol---_S70m');
+        const symbol = symbolCell ? symbolCell.textContent.trim().toUpperCase() : null;
+        
+        if (symbol) {
+          this.originalRowPositions.set(symbol, { top: currentTop, transform: currentTransform });
+        }
+      });
+    }
+    
+    // Group rows by category
+    const growthRows = [];
+    const incomeRows = [];
+    const ungroupedRows = [];
+    
+    positionRows.forEach(row => {
+      const symbolCell = row.querySelector('.SymbolCellRenderer---symbol---_S70m');
+      const symbol = symbolCell ? symbolCell.textContent.trim().toUpperCase() : null;
+      
+      if (symbol) {
+        const originalData = this.originalRowPositions.get(symbol) || { top: '0px', transform: 'translateY(0px)' };
+        
+        if (this.growthSymbols.has(symbol)) {
+          growthRows.push({ row, symbol, originalData });
+        } else if (this.incomeSymbols.has(symbol)) {
+          incomeRows.push({ row, symbol, originalData });
+        } else {
+          ungroupedRows.push({ row, symbol, originalData });
+        }
+      }
+    });
+    
+    // Use fixed row height from E*TRADE (37px)
+    const ROW_HEIGHT = 37;
+    let currentPosition = 0;
+    
+    // Position Growth rows first
+    growthRows.forEach(({ row, symbol }, index) => {
+      const newTop = currentPosition * ROW_HEIGHT;
+      row.style.top = `${newTop}px`;
+      row.style.transform = 'translateY(0px)';
+      currentPosition++;
+    });
+    
+    // Position Income rows second
+    incomeRows.forEach(({ row, symbol }, index) => {
+      const newTop = currentPosition * ROW_HEIGHT;
+      row.style.top = `${newTop}px`;
+      row.style.transform = 'translateY(0px)';
+      currentPosition++;
+    });
+    
+    // Position ungrouped rows last
+    ungroupedRows.forEach(({ row, symbol }, index) => {
+      const newTop = currentPosition * ROW_HEIGHT;
+      row.style.top = `${newTop}px`;
+      row.style.transform = 'translateY(0px)';
+      currentPosition++;
+    });
+    
+    console.log(`Sorted ${growthRows.length} Growth, ${incomeRows.length} Income, ${ungroupedRows.length} ungrouped rows`);
+  }
+
+  revertSorting() {
+    const positionRows = document.querySelectorAll('.RowRenderer---root---C9M4t[role="row"]');
+    
+    positionRows.forEach(row => {
+      const symbolCell = row.querySelector('.SymbolCellRenderer---symbol---_S70m');
+      const symbol = symbolCell ? symbolCell.textContent.trim().toUpperCase() : null;
+      
+      if (symbol && this.originalRowPositions.has(symbol)) {
+        const originalData = this.originalRowPositions.get(symbol);
+        row.style.top = originalData.top;
+        row.style.transform = originalData.transform;
+      }
+    });
+  }
+
+  calculateRowHeight(rows) {
+    if (rows.length < 2) {
+
+      return 40; // Default fallback
+    }
+    
+    // Get all top positions and sort them to find consistent spacing
+    const tops = [];
+    for (let i = 0; i < Math.min(rows.length, 5); i++) {
+      const top = parseInt(rows[i].style.top) || 0;
+      if (top > 0) tops.push(top);
+    }
+    
+    if (tops.length < 2) {
+
+      return 40;
+    }
+    
+    tops.sort((a, b) => a - b);
+    const height = tops[1] - tops[0];
+
+    
+    return height > 0 ? height : 40;
+  }
+
+  getStartingPosition(rows) {
+    if (rows.length === 0) {
+
+      return 0;
+    }
+    
+    // Find the minimum top position to start from
+    let minTop = Infinity;
+    for (let i = 0; i < rows.length; i++) {
+      const top = parseInt(rows[i].style.top) || 0;
+      if (top < minTop) {
+        minTop = top;
+      }
+    }
+    
+    if (minTop === Infinity) minTop = 0;
+
+    return minTop;
+  }
+
+  toggleSorting() {
+    this.sortingEnabled = !this.sortingEnabled;
+    this.saveConfiguration();
+    
+    if (this.sortingEnabled) {
+      this.sortRowsByGroup();
+      console.log('Visual sorting enabled');
+    } else {
+      this.revertSorting();
+      console.log('Visual sorting disabled');
+    }
+    
+    // Update UI if config panel is open
+    this.updateConfigPanelIfExists();
   }
 
   highlightRow(row, symbol, group) {
     if (group === 'growth') {
       row.style.backgroundColor = '#e8f2ff'; // Muted blue
       row.setAttribute('data-etrade-helper', 'growth');
-      console.log(`📈 Highlighted ${symbol} (Growth)`);
+
     } else if (group === 'income') {
       row.style.backgroundColor = '#e8f5e8'; // Muted green
       row.setAttribute('data-etrade-helper', 'income');
-      console.log(`� Highlighted ${symbol} (Income)`);
+
     }
   }
 
@@ -194,7 +351,7 @@ class EtradePortfolioHelper {
       position: fixed;
       top: 20px;
       right: 20px;
-      width: 300px;
+      width: 320px;
       background: white;
       border: 2px solid #007bff;
       border-radius: 8px;
@@ -228,6 +385,14 @@ Example: AAPL, TSLA, NVDA, GOOGL"></textarea>
 Example: T, VZ, KO, JNJ"></textarea>
       </div>
       
+      <div style="margin-bottom: 15px;">
+        <label style="display: flex; align-items: center; font-weight: bold; color: #333; cursor: pointer;">
+          <input type="checkbox" id="etrade-helper-sorting" style="margin-right: 8px;">
+          🔄 Visual Sorting (Group rows together)
+        </label>
+        <small style="color: #666; margin-left: 20px;">Group Growth and Income rows visually together</small>
+      </div>
+      
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
         <button id="etrade-helper-save" style="flex: 1; background: #28a745; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer;">Save & Apply</button>
         <button id="etrade-helper-clear" style="flex: 1; background: #dc3545; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer;">Clear All</button>
@@ -253,6 +418,20 @@ Example: T, VZ, KO, JNJ"></textarea>
     
     document.getElementById('etrade-helper-clear').onclick = () => {
       this.clearSymbolsFromPanel();
+    };
+    
+    // Add sorting toggle event listener
+    document.getElementById('etrade-helper-sorting').onchange = (e) => {
+      this.sortingEnabled = e.target.checked;
+      this.saveConfiguration();
+      
+      if (this.sortingEnabled) {
+        this.sortRowsByGroup();
+
+      } else {
+        this.revertSorting();
+
+      }
     };
     
     // Create toggle button
@@ -299,6 +478,7 @@ Example: T, VZ, KO, JNJ"></textarea>
     const incomeTextarea = document.getElementById('etrade-helper-income');
     const growthCountSpan = document.getElementById('etrade-helper-growth-count');
     const incomeCountSpan = document.getElementById('etrade-helper-income-count');
+    const sortingCheckbox = document.getElementById('etrade-helper-sorting');
     
     if (growthTextarea) {
       growthTextarea.value = Array.from(this.growthSymbols).join(', ');
@@ -315,6 +495,10 @@ Example: T, VZ, KO, JNJ"></textarea>
     if (incomeCountSpan) {
       incomeCountSpan.textContent = this.incomeSymbols.size;
     }
+    
+    if (sortingCheckbox) {
+      sortingCheckbox.checked = this.sortingEnabled;
+    }
   }
 
   updateConfigPanelIfExists() {
@@ -327,6 +511,7 @@ Example: T, VZ, KO, JNJ"></textarea>
   saveSymbolsFromPanel() {
     const growthTextarea = document.getElementById('etrade-helper-growth');
     const incomeTextarea = document.getElementById('etrade-helper-income');
+    const sortingCheckbox = document.getElementById('etrade-helper-sorting');
     const statusDiv = document.getElementById('etrade-helper-status');
     
     try {
@@ -345,6 +530,7 @@ Example: T, VZ, KO, JNJ"></textarea>
       
       this.growthSymbols = new Set(growthSymbols);
       this.incomeSymbols = new Set(incomeSymbols);
+      this.sortingEnabled = sortingCheckbox.checked;
       this.saveConfiguration();
       
       // Re-scan and highlight
@@ -371,12 +557,14 @@ Example: T, VZ, KO, JNJ"></textarea>
   clearSymbolsFromPanel() {
     this.growthSymbols.clear();
     this.incomeSymbols.clear();
+    this.sortingEnabled = false;
+    this.originalRowPositions.clear(); // Reset position tracking
     this.saveConfiguration();
     this.clearAllHighlights();
     this.updateConfigPanel();
     
     const statusDiv = document.getElementById('etrade-helper-status');
-    statusDiv.textContent = 'All highlights cleared';
+    statusDiv.textContent = 'All highlights and sorting cleared';
     statusDiv.style.color = '#dc3545';
     
     setTimeout(() => {
@@ -447,6 +635,38 @@ Example: T, VZ, KO, JNJ"></textarea>
   scan() {
     this.scanAndHighlight();
   }
+
+  // Debug function to inspect DOM structure
+  debugRows() {
+
+    const rows = document.querySelectorAll('.RowRenderer---root---C9M4t[role="row"]');
+    // Found ${rows.length} portfolio rows
+    
+    rows.forEach((row, index) => {
+      const symbolCell = row.querySelector('.SymbolCellRenderer---symbol---_S70m');
+      const symbol = symbolCell ? symbolCell.textContent.trim().toUpperCase() : null;
+      const top = row.style.top;
+      const position = row.style.position;
+      
+      console.log(`Row ${index}: symbol=${symbol}, top=${top}, position=${position}`);
+      
+      if (index < 3) { // Show detailed info for first 3 rows
+        console.log('  Classes:', row.className);
+        console.log('  All styles:', row.style.cssText);
+        console.log('  Symbol cell:', symbolCell);
+      }
+    });
+    
+    // Check if rows are absolutely positioned
+    const firstRow = rows[0];
+    if (firstRow) {
+      const computedStyle = window.getComputedStyle(firstRow);
+      console.log('First row computed position:', computedStyle.position);
+      console.log('First row computed top:', computedStyle.top);
+    }
+    
+    return rows;
+  }
 }
 
 // Initialize the extension
@@ -456,7 +676,7 @@ const etradeHelper = new EtradePortfolioHelper();
 window.etradeHelper = etradeHelper;
 
 // Display available commands
-console.log('✨ E*TRADE Portfolio Helper - Growth & Income Groups');
+console.log('✨ E*TRADE Portfolio Helper - Growth & Income Groups with Visual Sorting');
 console.log('Available commands:');
 console.log('Growth symbols (muted blue):');
 console.log('  etradeHelper.addGrowthSymbol("AAPL") - Add to Growth group');
@@ -470,11 +690,18 @@ console.log('  etradeHelper.removeIncomeSymbol("T") - Remove from Income');
 console.log('  etradeHelper.setIncomeSymbols(["T", "VZ"]) - Set all Income symbols');
 console.log('  etradeHelper.getIncomeSymbols() - Get Income symbol list');
 console.log('');
+console.log('Visual Sorting:');
+console.log('  etradeHelper.toggleSorting() - Toggle visual sorting on/off');
+console.log('  etradeHelper.sortRowsByGroup() - Apply sorting now');
+console.log('  etradeHelper.revertSorting() - Revert to original positions');
+console.log('');
 console.log('General commands:');
 console.log('  etradeHelper.getAllSymbols() - Get both groups');
 console.log('  etradeHelper.scan() - Re-scan and apply highlights');
 console.log('  etradeHelper.clearAllHighlights() - Clear all highlights');
+console.log('  etradeHelper.debugRows() - Debug DOM structure (troubleshooting)');
 console.log('');
-console.log('� Muted blue rows = Growth symbols');
+console.log('📈 Muted blue rows = Growth symbols');
 console.log('🟢 Muted green rows = Income symbols');
+console.log('Visual sorting groups rows together');
 console.log('⚙️ Click the gear icon in top-right to configure via UI');
