@@ -7,6 +7,7 @@ class EtradePortfolioHelper {
     this.growthSymbols = new Set();
     this.incomeSymbols = new Set();
     this.sortingEnabled = false; // Track if visual sorting is enabled
+    this.coloringEnabled = true; // Track if color coding is enabled (default on)
     this.originalRowPositions = new Map(); // Store original positions for reverting
     this.loadConfiguration();
     this.init();
@@ -35,6 +36,7 @@ class EtradePortfolioHelper {
       const savedGrowth = localStorage.getItem('etradeHelper_growthSymbols');
       const savedIncome = localStorage.getItem('etradeHelper_incomeSymbols');
       const savedSorting = localStorage.getItem('etradeHelper_sortingEnabled');
+      const savedColoring = localStorage.getItem('etradeHelper_coloringEnabled');
       
       if (savedGrowth) {
         const growthArray = JSON.parse(savedGrowth);
@@ -55,6 +57,11 @@ class EtradePortfolioHelper {
       // Load sorting preference
       if (savedSorting !== null) {
         this.sortingEnabled = JSON.parse(savedSorting);
+      }
+      
+      // Load coloring preference
+      if (savedColoring !== null) {
+        this.coloringEnabled = JSON.parse(savedColoring);
       }
       
       console.log('Configuration loaded');
@@ -81,6 +88,7 @@ class EtradePortfolioHelper {
       localStorage.setItem('etradeHelper_growthSymbols', JSON.stringify(growthArray));
       localStorage.setItem('etradeHelper_incomeSymbols', JSON.stringify(incomeArray));
       localStorage.setItem('etradeHelper_sortingEnabled', JSON.stringify(this.sortingEnabled));
+      localStorage.setItem('etradeHelper_coloringEnabled', JSON.stringify(this.coloringEnabled));
       
       console.log('Configuration saved');
     } catch (error) {
@@ -154,13 +162,17 @@ class EtradePortfolioHelper {
           
           // Check if this symbol is in Growth group
           if (this.growthSymbols.has(symbol)) {
-            this.highlightRow(row, symbol, 'growth');
+            if (this.coloringEnabled) {
+              this.highlightRow(row, symbol, 'growth');
+            }
             group = 'growth';
             growthCount++;
           }
           // Check if this symbol is in Income group
           else if (this.incomeSymbols.has(symbol)) {
-            this.highlightRow(row, symbol, 'income');
+            if (this.coloringEnabled) {
+              this.highlightRow(row, symbol, 'income');
+            }
             group = 'income';
             incomeCount++;
           }
@@ -371,7 +383,7 @@ class EtradePortfolioHelper {
       position: fixed;
       top: 20px;
       right: 20px;
-      width: 320px;
+      width: 400px;
       background: white;
       border: 2px solid #007bff;
       border-radius: 8px;
@@ -406,6 +418,14 @@ Example: T, VZ, KO, JNJ"></textarea>
       
       <div style="margin-bottom: 15px;">
         <label style="display: flex; align-items: center; font-weight: bold; color: #333; cursor: pointer;">
+          <input type="checkbox" id="etrade-helper-coloring" style="margin-right: 8px;">
+          Color Coding (Highlight Growth/Income rows)
+        </label>
+        <small style="color: #666; margin-left: 20px;">Apply blue/green background colors to grouped rows</small>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <label style="display: flex; align-items: center; font-weight: bold; color: #333; cursor: pointer;">
           <input type="checkbox" id="etrade-helper-sorting" style="margin-right: 8px;">
           Visual Sorting (Group rows together)
         </label>
@@ -436,6 +456,15 @@ Example: T, VZ, KO, JNJ"></textarea>
     
     document.getElementById('etrade-helper-growth').addEventListener('input', debouncedSave);
     document.getElementById('etrade-helper-income').addEventListener('input', debouncedSave);
+    
+    // Add color coding toggle event listener
+    document.getElementById('etrade-helper-coloring').onchange = (e) => {
+      this.coloringEnabled = e.target.checked;
+      this.saveConfiguration();
+      
+      // Re-scan and highlight to apply/remove colors
+      this.scanAndHighlight();
+    };
     
     // Add sorting toggle event listener
     document.getElementById('etrade-helper-sorting').onchange = (e) => {
@@ -571,6 +600,7 @@ Example: T, VZ, KO, JNJ"></textarea>
     const incomeTextarea = document.getElementById('etrade-helper-income');
     const growthCountSpan = document.getElementById('etrade-helper-growth-count');
     const incomeCountSpan = document.getElementById('etrade-helper-income-count');
+    const coloringCheckbox = document.getElementById('etrade-helper-coloring');
     const sortingCheckbox = document.getElementById('etrade-helper-sorting');
     
     if (growthTextarea) {
@@ -587,6 +617,10 @@ Example: T, VZ, KO, JNJ"></textarea>
     
     if (incomeCountSpan) {
       incomeCountSpan.textContent = this.incomeSymbols.size;
+    }
+    
+    if (coloringCheckbox) {
+      coloringCheckbox.checked = this.coloringEnabled;
     }
     
     if (sortingCheckbox) {
