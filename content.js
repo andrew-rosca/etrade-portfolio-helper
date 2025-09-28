@@ -91,6 +91,8 @@ class EtradePortfolioHelper {
   observePageChanges() {
     const observer = new MutationObserver((mutations) => {
       let shouldScan = false;
+      let shouldCreateButton = false;
+      
       mutations.forEach(mutation => {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
           // Check if portfolio table content has been added/modified
@@ -99,7 +101,12 @@ class EtradePortfolioHelper {
               if (node.classList?.contains('RowRenderer---root---C9M4t') || 
                   node.querySelector?.('.RowRenderer---root---C9M4t')) {
                 shouldScan = true;
-                break;
+              }
+              
+              // Check if customize section was added (page navigation)
+              if (node.classList?.contains('PortfoliosFilters---customize---Tdpzj') || 
+                  node.querySelector?.('.PortfoliosFilters---customize---Tdpzj')) {
+                shouldCreateButton = true;
               }
             }
           }
@@ -108,6 +115,15 @@ class EtradePortfolioHelper {
       
       if (shouldScan) {
         setTimeout(() => this.scanAndHighlight(), 1000);
+      }
+      
+      if (shouldCreateButton) {
+        // Double-check no button exists before creating
+        setTimeout(() => {
+          if (!document.getElementById('etrade-helper-toggle')) {
+            this.createToggleButtonWithRetry();
+          }
+        }, 500);
       }
     });
 
@@ -364,13 +380,12 @@ class EtradePortfolioHelper {
     `;
     
     panel.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h3 style="margin: 0; color: #007bff;">E*TRADE Helper</h3>
+      <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px;">
         <button id="etrade-helper-close" style="background: none; border: none; font-size: 18px; cursor: pointer;">×</button>
       </div>
       
       <div style="margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #0066cc;">📈 Growth Symbols (Muted Blue):</label>
+        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #0066cc;">Growth Symbols (Muted Blue):</label>
         <textarea id="etrade-helper-growth" 
                   style="width: 100%; height: 70px; border: 1px solid #ccc; border-radius: 4px; padding: 8px; resize: vertical;"
                   placeholder="Enter growth symbols separated by commas
@@ -378,7 +393,7 @@ Example: AAPL, TSLA, NVDA, GOOGL"></textarea>
       </div>
       
       <div style="margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #228b22;">💰 Income Symbols (Muted Green):</label>
+        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #228b22;">Income Symbols (Muted Green):</label>
         <textarea id="etrade-helper-income" 
                   style="width: 100%; height: 70px; border: 1px solid #ccc; border-radius: 4px; padding: 8px; resize: vertical;"
                   placeholder="Enter income symbols separated by commas
@@ -388,14 +403,9 @@ Example: T, VZ, KO, JNJ"></textarea>
       <div style="margin-bottom: 15px;">
         <label style="display: flex; align-items: center; font-weight: bold; color: #333; cursor: pointer;">
           <input type="checkbox" id="etrade-helper-sorting" style="margin-right: 8px;">
-          🔄 Visual Sorting (Group rows together)
+          Visual Sorting (Group rows together)
         </label>
         <small style="color: #666; margin-left: 20px;">Group Growth and Income rows visually together</small>
-      </div>
-      
-      <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <button id="etrade-helper-save" style="flex: 1; background: #28a745; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer;">Save & Apply</button>
-        <button id="etrade-helper-clear" style="flex: 1; background: #dc3545; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer;">Clear All</button>
       </div>
       
       <div style="font-size: 12px; color: #666;">
@@ -409,16 +419,19 @@ Example: T, VZ, KO, JNJ"></textarea>
     // Add event listeners
     document.getElementById('etrade-helper-close').onclick = () => {
       panel.style.display = 'none';
-      document.getElementById('etrade-helper-toggle').style.display = 'block';
     };
     
-    document.getElementById('etrade-helper-save').onclick = () => {
-      this.saveSymbolsFromPanel();
+    // Auto-save on textarea changes (with debounce to prevent typing interference)
+    let saveTimeout;
+    const debouncedSave = () => {
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        this.saveSymbolsFromPanel();
+      }, 500); // Wait 500ms after user stops typing
     };
     
-    document.getElementById('etrade-helper-clear').onclick = () => {
-      this.clearSymbolsFromPanel();
-    };
+    document.getElementById('etrade-helper-growth').addEventListener('input', debouncedSave);
+    document.getElementById('etrade-helper-income').addEventListener('input', debouncedSave);
     
     // Add sorting toggle event listener
     document.getElementById('etrade-helper-sorting').onchange = (e) => {
@@ -427,47 +440,123 @@ Example: T, VZ, KO, JNJ"></textarea>
       
       if (this.sortingEnabled) {
         this.sortRowsByGroup();
-
       } else {
         this.revertSorting();
-
       }
     };
     
-    // Create toggle button
-    this.createToggleButton();
+    // Create toggle button (with retry for dynamic content)
+    this.createToggleButtonWithRetry();
     
     // Update panel with current symbols
     this.updateConfigPanel();
   }
 
-  createToggleButton() {
+  createToggleButtonWithRetry(retries = 0) {
+    if (retries > 10) {
+      console.log('Could not find customize section, using fallback button');
+      this.createFallbackButton();
+      return;
+    }
+    
+    // Always check if button already exists to prevent duplicates
+    if (document.getElementById('etrade-helper-toggle')) {
+      return;
+    }
+    
+    const customizeContainer = document.querySelector('.PortfoliosFilters---customize---Tdpzj');
+    
+    if (customizeContainer) {
+      this.createToggleButton(customizeContainer);
+    } else {
+      // Retry after 500ms
+      setTimeout(() => this.createToggleButtonWithRetry(retries + 1), 500);
+    }
+  }
+  
+  createToggleButton(customizeContainer) {
+    // Create a container for our button
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+      margin-top: 5px;
+      padding-top: 2px;
+    `;
+    
+    // Create the button with muted blue background and text
     const button = document.createElement('button');
     button.id = 'etrade-helper-toggle';
-    button.innerHTML = '⚙️';
-    button.title = 'E*TRADE Portfolio Helper Settings';
+    button.innerHTML = 'Position Grouping';
+    button.title = 'Portfolio Grouping Settings';
+    button.style.cssText = `
+      width: 110px;
+      background: rgba(0, 123, 255, 0.1);
+      color: #007bff;
+      border: 1px solid rgba(0, 123, 255, 0.2);
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      white-space: nowrap;
+      line-height: 1.2;
+      transition: background-color 0.2s;
+      margin-left: -25px;
+    `;
+    
+    // Add hover effect
+    button.onmouseover = () => {
+      button.style.backgroundColor = 'rgba(0, 123, 255, 0.15)';
+    };
+    button.onmouseout = () => {
+      button.style.backgroundColor = 'rgba(0, 123, 255, 0.1)';
+    };
+    
+    button.onclick = () => {
+      const panel = document.getElementById('etrade-helper-panel');
+      if (panel.style.display === 'block') {
+        panel.style.display = 'none';
+      } else {
+        panel.style.display = 'block';
+        // Update panel with current symbols when shown
+        this.updateConfigPanel();
+      }
+    };
+    
+    buttonContainer.appendChild(button);
+    customizeContainer.appendChild(buttonContainer);
+  }
+  
+  createFallbackButton() {
+    const button = document.createElement('button');
+    button.id = 'etrade-helper-toggle';
+    button.innerHTML = 'Position Grouping';
+    button.title = 'Portfolio Grouping Settings';
     button.style.cssText = `
       position: fixed;
       top: 20px;
       right: 20px;
-      width: 40px;
-      height: 40px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      font-size: 18px;
+      background: rgba(0, 123, 255, 0.1);
+      color: #007bff;
+      border: 1px solid rgba(0, 123, 255, 0.2);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      white-space: nowrap;
+      line-height: 1.2;
       cursor: pointer;
       z-index: 9999;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     `;
     
     button.onclick = () => {
       const panel = document.getElementById('etrade-helper-panel');
-      panel.style.display = 'block';
-      button.style.display = 'none';
-      // Update panel with current symbols when shown
-      this.updateConfigPanel();
+      if (panel.style.display === 'block') {
+        panel.style.display = 'none';
+      } else {
+        panel.style.display = 'block';
+        this.updateConfigPanel();
+      }
     };
     
     document.body.appendChild(button);
