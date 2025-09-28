@@ -249,11 +249,12 @@ class EtradePortfolioHelper {
       currentPosition++;
     });
     
-    // Position ungrouped rows last
+    // Position ungrouped rows last with white background
     ungroupedRows.forEach(({ row, symbol }, index) => {
       const newTop = currentPosition * ROW_HEIGHT;
       row.style.top = `${newTop}px`;
       row.style.transform = 'translateY(0px)';
+      row.style.backgroundColor = 'white';
       currentPosition++;
     });
     
@@ -272,6 +273,9 @@ class EtradePortfolioHelper {
         row.style.top = originalData.top;
         row.style.transform = originalData.transform;
       }
+      
+      // Reset background color to default (remove override)
+      row.style.backgroundColor = '';
     });
   }
 
