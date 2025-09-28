@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E*TRADE Portfolio Helper - Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .icon-container {
+            display: inline-block;
+            margin: 20px;
+            text-align: center;
+        }
+        .icon-preview {
+            border: 1px solid #ccc;
+            background: white;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        canvas {
+            border: 1px solid #ddd;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .colors {
+            margin: 10px 0;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>E*TRADE Portfolio Helper - Icon Generator</h1>
+    <p>Icons with blue/green table rows and E*TRADE asterisk</p>
+    
+    <div class="colors">
+        <strong>Colors used:</strong><br>
+        Growth Blue: rgba(0, 123, 255, 0.1) with border rgba(0, 123, 255, 0.2)<br>
+        Income Green: rgba(40, 167, 69, 0.1) with border rgba(40, 167, 69, 0.2)<br>
+        Asterisk: #007bff
+    </div>
+
+    <div class="icon-container">
+        <div class="icon-preview">
+            <canvas id="icon16" width="16" height="16"></canvas>
+        </div>
+        <div>16x16</div>
+        <button onclick="downloadIcon('icon16', 16)">Download</button>
+    </div>
+
+    <div class="icon-container">
+        <div class="icon-preview">
+            <canvas id="icon32" width="32" height="32"></canvas>
+        </div>
+        <div>32x32</div>
+        <button onclick="downloadIcon('icon32', 32)">Download</button>
+    </div>
+
+    <div class="icon-container">
+        <div class="icon-preview">
+            <canvas id="icon48" width="48" height="48"></canvas>
+        </div>
+        <div>48x48</div>
+        <button onclick="downloadIcon('icon48', 48)">Download</button>
+    </div>
+
+    <div class="icon-container">
+        <div class="icon-preview">
+            <canvas id="icon128" width="128" height="128"></canvas>
+        </div>
+        <div>128x128</div>
+        <button onclick="downloadIcon('icon128', 128)">Download</button>
+    </div>
+
+    <script>
+        // Colors from the extension
+        const growthBlue = 'rgba(0, 123, 255, 0.3)';
+        const growthBorder = 'rgba(0, 123, 255, 0.6)';
+        const incomeGreen = 'rgba(40, 167, 69, 0.3)';
+        const incomeBorder = 'rgba(40, 167, 69, 0.6)';
+        const asteriskColor = '#007bff';
+
+        function drawIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // Calculate dimensions
+            const padding = Math.max(1, Math.floor(size * 0.1));
+            const rowHeight = Math.floor((size - padding * 2) / 3);
+            const rowWidth = size - padding * 2;
+            
+            // Draw blue row (Growth)
+            ctx.fillStyle = growthBlue;
+            ctx.fillRect(padding, padding, rowWidth, rowHeight);
+            ctx.strokeStyle = growthBorder;
+            ctx.lineWidth = Math.max(0.5, size / 64);
+            ctx.strokeRect(padding, padding, rowWidth, rowHeight);
+            
+            // Draw green row (Income) 
+            ctx.fillStyle = incomeGreen;
+            ctx.fillRect(padding, padding + rowHeight, rowWidth, rowHeight);
+            ctx.strokeStyle = incomeBorder;
+            ctx.strokeRect(padding, padding + rowHeight, rowWidth, rowHeight);
+            
+            // Draw white row (Ungrouped)
+            ctx.fillStyle = 'white';
+            ctx.fillRect(padding, padding + rowHeight * 2, rowWidth, rowHeight);
+            ctx.strokeStyle = '#ddd';
+            ctx.strokeRect(padding, padding + rowHeight * 2, rowWidth, rowHeight);
+            
+            // Draw asterisk in center
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const asteriskSize = Math.max(12, size * 0.84);
+            
+            ctx.fillStyle = asteriskColor;
+            ctx.font = `bold ${asteriskSize}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            // Adjust Y position down to compensate for asterisk positioning
+            const adjustedY = centerY + (asteriskSize * 0.2);
+            ctx.fillText('*', centerX, adjustedY);
+        }
+
+        function downloadIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = `icon${size}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // Generate all icons on page load
+        window.onload = function() {
+            drawIcon('icon16', 16);
+            drawIcon('icon32', 32);
+            drawIcon('icon48', 48);
+            drawIcon('icon128', 128);
+        };
+    </script>
+</body>
+</html>
