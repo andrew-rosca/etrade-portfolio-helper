@@ -7,7 +7,7 @@ set -e
 
 # Configuration
 EXTENSION_NAME="etrade-portfolio-helper"
-VERSION="1.0.0"
+VERSION=$(cat version.txt)
 OUTPUT_DIR="dist"
 ARCHIVE_NAME="${EXTENSION_NAME}-v${VERSION}"
 

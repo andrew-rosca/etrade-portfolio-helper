@@ -1,0 +1,58 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Read version
+        id: version
+        run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
+      
+      - name: Create distribution package
+        run: |
+          chmod +x create-distribution.sh
+          ./create-distribution.sh
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: E*TRADE Portfolio Helper v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## E*TRADE Portfolio Helper v${{ steps.version.outputs.VERSION }}
+            
+            ### Installation
+            1. Download `etrade-portfolio-helper-v${{ steps.version.outputs.VERSION }}.zip`
+            2. Extract the ZIP file
+            3. Load as unpacked extension in Chrome (`chrome://extensions/`)
+            4. See [README](https://github.com/andrew-rosca/etrade-portfolio-helper) for detailed instructions
+            
+            ### Features
+            - Group stocks into Growth/Income categories
+            - Visual sorting and color-coded highlighting
+            - Auto-save configuration
+            - Persistent settings
+          draft: false
+          prerelease: false
+      
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/etrade-portfolio-helper-v${{ steps.version.outputs.VERSION }}.zip
+          asset_name: etrade-portfolio-helper-v${{ steps.version.outputs.VERSION }}.zip
+          asset_content_type: application/zip

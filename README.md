@@ -1,195 +1,118 @@
-# E*TRADE Portfolio Helper Chrome Extension
+# E*TRADE Portfolio Helper
 
-A Chrome extension that adds visual grouping, highlighting, and sorting to E*TRADE portfolio position tables.
+A Chrome browser extension that organizes your E*TRADE portfolio by grouping stocks into categories with automatic sorting and color-coded highlighting.
 
-## 🎯 Purpose
+## Features
 
-This extension helps organize E*TRADE portfolio positions by:
-- **Visual Sorting**: Groups Growth and Income positions together at the top
-- **Color Coding**: Applies muted background colors to highlight different groups (optional)
-- **Symbol Management**: Easy-to-use configuration interface integrated into E*TRADE's UI
-- **White Background**: Ungrouped positions get clean white backgrounds when sorted
+- **Group Stocks**: Categorize positions into "Growth" and "Income" groups
+- **Visual Sorting**: Reorder portfolio so Growth positions appear first, then Income, then others
+- **Color Coding**: Optional blue/green backgrounds for different groups
+- **Auto-Save**: Changes save automatically as you type
+- **Persistent Settings**: Configuration remembered between sessions
 
-## 🔧 Features
+## Installation
 
-### Visual Sorting
-- **Position Grouping**: Growth positions appear first, then Income, then ungrouped
-- **Row Repositioning**: Uses E*TRADE's dual positioning system (CSS top + transform)
-- **Toggle Control**: Enable/disable visual sorting via configuration panel
-- **Maintains Layout**: Works seamlessly with E*TRADE's virtual table system
+### Download and Install
 
-### Color Coding (Optional)
-- **Growth Group**: Muted blue background (rgba(0, 123, 255, 0.1))
-- **Income Group**: Muted green background (rgba(40, 167, 69, 0.1))
-- **Independent Toggle**: Color coding can be enabled/disabled separately from sorting
-- **Clean Ungrouped**: White background for ungrouped positions when sorted
+1. Download the latest release ZIP from [Releases](https://github.com/andrew-rosca/etrade-portfolio-helper/releases)
+2. Extract the ZIP file to a folder
+3. Open Chrome and go to `chrome://extensions/`
+4. Enable "Developer mode" (toggle in top-right)
+5. Click "Load unpacked" and select the extracted folder
+6. Navigate to your E*TRADE portfolio page
 
-### Configuration Interface
-- **Integrated Button**: "Position Grouping" button below E*TRADE's "Customize" button
-- **Clean Dialog**: Streamlined configuration panel with no unnecessary elements
-- **Auto-Save**: Changes save automatically as you type (with debounce)
-- **Persistent Storage**: All settings saved to localStorage
+### First-Time Setup
 
-## 📁 File Structure
+1. Look for "Position Grouping" button below "Customize" on your portfolio page
+2. Click it to open configuration
+3. Enter stock symbols separated by commas:
+   - **Growth Symbols**: e.g., `AAPL, GOOGL, MSFT, NVDA`
+   - **Income Symbols**: e.g., `T, VZ, KO, JNJ, PFE`
+4. Enable features:
+   - **Color Coding**: Adds colored backgrounds
+   - **Visual Sorting**: Groups positions together
+5. Close dialog - settings save automatically
 
+## Usage
+
+Once configured, the extension works automatically. Click "Position Grouping" anytime to adjust settings or toggle features on/off.
+
+## Troubleshooting
+
+**Button not visible**: Refresh page, check extension is enabled in `chrome://extensions/`
+
+**Stocks not grouping**: Verify symbols are entered correctly with commas, check "Visual Sorting" is enabled
+
+**Colors not showing**: Check "Color Coding" is enabled, refresh page
+
+**Settings not saving**: Wait 1 second after typing for auto-save, check browser console for errors
+
+## Privacy & Security
+
+- Only accesses E*TRADE websites (us.etrade.com)
+- Read-only access to portfolio page
+- All data stored locally in browser
+- No external servers or network requests
+- Open source - inspect the code
+
+## For Developers
+
+### Development Setup
+
+```bash
+git clone https://github.com/andrew-rosca/etrade-portfolio-helper.git
+cd etrade-portfolio-helper
 ```
-etrade-portfolio-helper/
-├── manifest.json          # Chrome extension manifest (Manifest V3)
-├── content.js            # Main extension logic
-├── styles.css           # Optional CSS enhancements
-└── icons/              # Extension icons
-    ├── icon16.png
-    ├── icon32.png
-    ├── icon48.png
-    └── icon128.png
+
+Load extension in Chrome:
+1. Go to `chrome://extensions/`
+2. Enable "Developer mode"
+3. Click "Load unpacked"
+4. Select the project folder
+
+### Creating a Release
+
+Update version in `version.txt`, then:
+
+```bash
+chmod +x create-distribution.sh
+./create-distribution.sh
 ```
 
-## 🚀 Installation
+Creates `dist/etrade-portfolio-helper-vX.Y.Z.zip` ready for distribution.
 
-1. **Load Extension**: Load as unpacked extension in Chrome Developer Mode
-2. **Navigate**: Go to E*TRADE portfolio page
-3. **Configure**: Click "Position Grouping" button below "Customize" to set symbol groups
-4. **Enable Features**: Toggle visual sorting and/or color coding as desired
-5. **Enjoy**: Positions will be automatically grouped and highlighted
+### Technical Details
 
-## 💻 Technical Implementation
+- Vanilla JavaScript (no dependencies)
+- Chrome Manifest V3
+- MutationObserver for SPA compatibility
+- localStorage for persistence
+- Dual CSS positioning (top + transform) for E*TRADE's virtual table
 
-### Key Components
-
-#### EtradePortfolioHelper Class
-- **Constructor**: Initializes symbol groups, loads configuration, creates UI
-- **scanAndHighlight()**: Main scanning function for position detection and highlighting
-- **sortRowsByGroup()**: Visual sorting using dual positioning (top + transform)
-- **revertSorting()**: Restores original row positions and colors
-- **createToggleButton()**: Creates integrated "Position Grouping" button
-
-#### DOM Selectors
-- **Position Rows**: `.RowRenderer---root---C9M4t[role="row"]`
-- **Symbol Cells**: `.SymbolCellRenderer---symbol---_S70m`
-
-#### Storage
-- **Growth Symbols**: `localStorage.getItem('etradeHelper_growthSymbols')`
-- **Income Symbols**: `localStorage.getItem('etradeHelper_incomeSymbols')`
-- **Sorting Enabled**: `localStorage.getItem('etradeHelper_sortingEnabled')`
-- **Coloring Enabled**: `localStorage.getItem('etradeHelper_coloringEnabled')`
-
-### Visual Implementation
-- **Row Positioning**: Uses both `style.top` and `style.transform` for E*TRADE compatibility
-- **Background Colors**: Applied conditionally based on color coding setting
-- **Button Integration**: Positioned using `.PortfoliosFilters---customize---Tdpzj` container
-- **37px Row Height**: Fixed height determined from E*TRADE's virtual table system
-
-## 🔄 Development History
-
-### Evolution Timeline
-1. **Initial**: Simple highlighting with basic colors
-2. **Visual Sorting**: Added row repositioning to group positions together
-3. **Dual Positioning**: Solved E*TRADE's complex virtual table system
-4. **UI Integration**: Moved from floating panel to integrated button design
-5. **Feature Separation**: Split color coding and sorting into independent toggles
-6. **Polish**: Clean dialog, auto-save, proper centering, and white ungrouped rows
-
-### Key Technical Breakthroughs
-- **Dual Positioning Fix**: E*TRADE uses both CSS `top` and `transform: translateY()`
-- **37px Row Height**: Discovered fixed row height for accurate positioning
-- **Button Placement**: Successfully integrated into E*TRADE's existing UI
-- **Auto-Save UX**: Debounced input handling prevents typing interference
-
-## 🐛 Common Issues & Solutions
-
-### Button Not Appearing
-- **Check Element**: Look for `.PortfoliosFilters---customize---Tdpzj` in DOM
-- **Solution**: Extension retries button creation up to 10 times with delays
-- **Fallback**: Creates floating button if customize section not found
-
-### Sorting Not Working
-- **Dual Properties**: Ensure both `style.top` and `style.transform` are set
-- **Row Height**: Verify 37px spacing between rows
-- **Check Console**: Look for "Visual sort complete" message
-
-### Colors Not Applying
-- **Toggle Setting**: Verify "Color Coding" is enabled in configuration
-- **Re-scan Trigger**: Colors update when setting is toggled
-- **Check Storage**: Verify `etradeHelper_coloringEnabled` in localStorage
-
-### Configuration Not Saving
-- **Debounce Delay**: Auto-save waits 500ms after typing stops
-- **Storage Access**: Check browser's localStorage permissions
-- **Console Errors**: Look for localStorage-related error messages
-
-## 🛠️ Console Commands
-
-Available in browser console when extension is loaded:
+### Console Commands
 
 ```javascript
-// Manual re-scan and highlight
+// Access extension instance
+window.etradeHelper
+
+// Trigger manual scan
 window.etradeHelper.scanAndHighlight()
 
-// Trigger visual sorting
-window.etradeHelper.sortRowsByGroup()
-
-// Revert to original order
-window.etradeHelper.revertSorting()
-
-// Check current configuration
+// Check configuration
 console.log('Growth:', Array.from(window.etradeHelper.growthSymbols))
-console.log('Income:', Array.from(window.etradeHelper.incomeSymbols))
 console.log('Sorting:', window.etradeHelper.sortingEnabled)
-console.log('Coloring:', window.etradeHelper.coloringEnabled)
 ```
 
-## 🎨 Customization
+## Contributing
 
-### Colors
-- **Growth**: `rgba(0, 123, 255, 0.1)` in `scanAndHighlight()` method
-- **Income**: `rgba(40, 167, 69, 0.1)` in `scanAndHighlight()` method
-- **Button**: `rgba(0, 123, 255, 0.1)` in `createToggleButton()` method
+Issues and pull requests welcome. Please test thoroughly on E*TRADE portfolio page before submitting.
 
-### Button Styling
-- **Size**: Adjust `width: 110px` and `font-size: 10px`
-- **Position**: Modify `margin-left: -25px` for alignment
-- **Text**: Change `'Position Grouping'` to custom label
+## License
 
-### Default Symbols
-Modify in `loadConfiguration()` method:
-- **Growth**: `['SPYG', 'AMZN', 'BRKW']`
-- **Income**: `['SPYI', 'MCD', 'CBF']`
+MIT License - see [LICENSE](LICENSE) file for details.
 
-## 🔮 Future Enhancements
+## Version
 
-### Potential Features
-- **Additional Groups**: Value, Dividend, Sector-based grouping
-- **Custom Colors**: User-selectable color themes
-- **Export**: Export grouped position data to CSV
-- **Analytics**: Performance tracking by group
-- **Keyboard Shortcuts**: Quick toggle for sorting/coloring
-
-### Technical Improvements
-- **Performance**: Optimize for large portfolios (100+ positions)
-- **Accessibility**: ARIA labels and keyboard navigation
-- **Themes**: Multiple color schemes and dark mode
-- **Sync**: Cloud storage for cross-device configuration
-
-## 📝 Notes for Future Development
-
-### Critical Dependencies
-- **E*TRADE DOM Structure**: Extension relies on specific CSS classes
-- **Chrome Extension API**: Uses Manifest V3 format
-- **localStorage**: All configuration is client-side only
-
-### Testing Approach
-1. **Load Extension**: Test in fresh Chrome profile
-2. **Navigate E*TRADE**: Verify positions are detected
-3. **Configure Groups**: Test symbol addition/removal
-4. **SPA Navigation**: Test page transitions within E*TRADE
-5. **Edge Cases**: Test with no positions, empty groups, invalid symbols
-
-### Deployment Considerations
-- **Privacy**: Extension only accesses E*TRADE domains
-- **Performance**: Minimal impact with efficient DOM observation
-- **Compatibility**: Works with E*TRADE's current UI (as of Sept 2025)
-
----
-
-*Last Updated: September 28, 2025*
-*Status: Fully functional with visual sorting, color coding toggles, and integrated UI*
+Current version: 1.0.0  
+Last updated: October 4, 2025  
+Compatible with: Chrome browsers, E*TRADE web interface
