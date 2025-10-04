@@ -2,6 +2,8 @@
 
 A Chrome browser extension that organizes your E*TRADE portfolio by grouping stocks into categories with automatic sorting and color-coded highlighting.
 
+<img width="1252" height="1524" alt="image" src="https://github.com/user-attachments/assets/0044872e-0a2e-4d3e-922a-a22e7ac277a2" />
+
 ## Features
 
 - **Group Stocks**: Categorize positions into "Growth" and "Income" groups
